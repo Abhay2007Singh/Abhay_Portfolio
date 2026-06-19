@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useEffect } from "react";
+import { useRef, useEffect, useState } from "react";
 import type { Project } from "@/data/projects";
 import TechChip from "./TechChip";
 
@@ -27,8 +27,20 @@ export default function ProjectCard({
 }: Props) {
   const wrapperRef = useRef<HTMLDivElement>(null);
   const innerRef = useRef<HTMLDivElement>(null);
+  const [isMobile, setIsMobile] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
 
   useEffect(() => {
+    const mq = window.matchMedia("(max-width: 639px)");
+    setIsMobile(mq.matches);
+    const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches);
+    mq.addEventListener("change", handler);
+    return () => mq.removeEventListener("change", handler);
+  }, []);
+
+  // Desktop: imperative expand
+  useEffect(() => {
+    if (isMobile) return;
     const inner = innerRef.current;
     const wrapper = wrapperRef.current;
     if (!inner || !wrapper) return;
@@ -37,17 +49,14 @@ export default function ProjectCard({
       const wrapperRect = wrapper.getBoundingClientRect();
       const containerEl = wrapper.closest(".proj-grid") as HTMLElement;
       const containerRect = containerEl?.getBoundingClientRect() ?? wrapperRect;
-
       const wrapperW = wrapperRect.width;
 
-      // Center horizontally, clamp within container
       let relLeft = (wrapperW - EXP_W) / 2;
       const absLeft = wrapperRect.left + relLeft;
       if (absLeft < containerRect.left) relLeft += containerRect.left - absLeft;
       const absRight = wrapperRect.left + relLeft + EXP_W;
       if (absRight > containerRect.right) relLeft -= absRight - containerRect.right;
 
-      // Center vertically, clamp so top doesn't go above viewport
       let relTop = (CARD_H - EXP_H) / 2;
       const absTop = wrapperRect.top + relTop;
       if (absTop < 8) relTop += 8 - absTop;
@@ -73,8 +82,114 @@ export default function ProjectCard({
       }, 360);
       return () => clearTimeout(t);
     }
-  }, [isExpanded]);
+  }, [isExpanded, isMobile]);
 
+  // ── MOBILE CARD ──────────────────────────────────────────────
+  if (isMobile) {
+    return (
+      <div className="rounded-xl border border-border bg-card overflow-hidden">
+        {/* Tap header */}
+        <button
+          className="w-full text-left px-5 py-5 flex items-start justify-between gap-3"
+          onClick={() => setMobileOpen((o) => !o)}
+          aria-expanded={mobileOpen}
+        >
+          <div className="flex-1 min-w-0">
+            <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-primary block mb-1">
+              {String(index + 1).padStart(2, "0")}
+            </span>
+            <h3 className="font-display text-lg font-bold text-text leading-tight">
+              {project.name}
+            </h3>
+            <p className="text-[13px] text-muted leading-snug mt-1">{project.tagline}</p>
+          </div>
+          <span className="text-muted shrink-0 mt-1 text-lg transition-transform duration-200"
+            style={{ transform: mobileOpen ? "rotate(45deg)" : "rotate(0deg)" }}>
+            +
+          </span>
+        </button>
+
+        {/* Tech chips always visible */}
+        <div className="px-5 pb-4 flex flex-wrap gap-1.5">
+          {project.stack.map((s) => (
+            <TechChip key={s} name={s} />
+          ))}
+        </div>
+
+        {/* Expandable detail */}
+        {mobileOpen && (
+          <div className="border-t border-border">
+            {/* Problem */}
+            <div className="px-5 py-4 border-b border-border">
+              <p className="font-mono text-[9px] uppercase tracking-[0.2em] text-primary mb-2">
+                Problem
+              </p>
+              <p className="text-[13px] text-muted leading-relaxed">{project.problem}</p>
+            </div>
+
+            {/* Solution */}
+            <div className="px-5 py-4 border-b border-border">
+              <p className="font-mono text-[9px] uppercase tracking-[0.2em] text-secondary mb-2">
+                Solution
+              </p>
+              <p className="text-[13px] text-muted leading-relaxed">{project.solution}</p>
+            </div>
+
+            {/* Features */}
+            <div className="px-5 py-4 border-b border-border">
+              <p className="font-mono text-[9px] uppercase tracking-[0.2em] text-muted mb-2">
+                Key Features
+              </p>
+              <ul className="flex flex-col gap-2">
+                {project.features.map((f, i) => (
+                  <li key={i} className="flex items-start gap-2 text-[13px] text-muted">
+                    <span className="text-primary shrink-0 mt-px">→</span>
+                    <span>{f}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            {/* Links */}
+            <div className="px-5 py-4 flex flex-wrap gap-2">
+              {project.githubUrl && (
+                <a
+                  href={project.githubUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="font-mono text-[11px] border border-border text-muted px-3 py-1.5 rounded hover:text-text transition-colors"
+                >
+                  GitHub ↗
+                </a>
+              )}
+              {project.liveUrl && (
+                <a
+                  href={project.liveUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="font-mono text-[11px] bg-primary text-bg px-3 py-1.5 rounded hover:bg-primary/90 transition-colors"
+                >
+                  Live ↗
+                </a>
+              )}
+              {project.demoUrl && (
+                <a
+                  href={project.demoUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="font-mono text-[11px] bg-secondary text-bg px-3 py-1.5 rounded hover:bg-secondary/90 transition-colors"
+                >
+                  Demo ↗
+                </a>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // ── DESKTOP CARD (unchanged) ──────────────────────────────────
   return (
     <div
       ref={wrapperRef}

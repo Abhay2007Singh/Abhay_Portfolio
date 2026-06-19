@@ -44,7 +44,8 @@ export default function Projects() {
             Projects
           </h2>
           <p className="text-muted text-sm max-w-xl leading-relaxed">
-            Hover any card to see the problem, solution, and engineering notes.
+            <span className="hidden sm:inline">Hover any card to see the problem, solution, and engineering notes.</span>
+            <span className="sm:hidden">Tap any card to expand the details.</span>
           </p>
         </div>
 
